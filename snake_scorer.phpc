@@ -5,6 +5,8 @@ class SnakeScorer implements Scorer
 {
     private $power;
     private $space_penalty;
+    private $moves_ahead = 1;
+    private $snake;
 
     private static $transformations = [
         ["description"=>"TL-TR", "actions"=>[]],
@@ -16,8 +18,9 @@ class SnakeScorer implements Scorer
         ["description"=>"BR-BL", "actions"=>["X", "Y"]],
         ["description"=>"BR-TR", "actions"=>["X", "Y", "XY"]]];
 
-    public function __construct($power, $space_penalty)
+    public function __construct($game, $power, $space_penalty)
     {
+        $snake = $this->getSnake($game);
         $this->power = $power;
         $this->space_penalty = $space_penalty;
     }
@@ -25,8 +28,6 @@ class SnakeScorer implements Scorer
     public function getScore($game)
     {
         Log::log(Log::LOG_TYPE_AI, 3, "SnakeScorer");
-
-        $snake = $this->getSnake($game);
 
         $max_score = 0;
         
@@ -49,15 +50,15 @@ class SnakeScorer implements Scorer
                 }
             }
 
-            $this->test($max_score, $game, $snake, $transform ["description"]);
+            $this->test($max_score, $game, $transform ["description"]);
         }
 
         return $max_score;
     }    
 
-    private function test(&$max_score, $game, $snake, $description)
+    private function test(&$max_score, $game, $description)
     {
-        $score = $this->scoreSnake($game, $snake, $description);
+        $score = $this->scoreSnake($game, $description);
         if ($score >= $max_score)
         {
             $max_score = $score;
@@ -65,16 +66,16 @@ class SnakeScorer implements Scorer
         Log::log(Log::LOG_TYPE_AI, 3, "Max Score=" . $max_score);
     }
 
-    private function scoreSnake($game, $snake, $description)
+    private function scoreSnake($game, $description)
     {
         $score = 0;
 
         $i = 0;
         $spaces = 0;
         { //Count spaces
-            while ($i < count($snake))
+            while ($i < count($this->snake))
             {
-                $c = $game->getCell($snake[$i]);
+                $c = $game->getCell($this->snake[$i]);
                 if ($c != Game::EMPTY_CELL)
                 {
                     break;
@@ -86,9 +87,9 @@ class SnakeScorer implements Scorer
 
         { //Score snake
             $min_value = Game::EMPTY_CELL;
-            while ($i < count($snake))
+            while ($i < count($this->snake))
             {
-                $c = $game->getCell($snake[$i]);
+                $c = $game->getCell($this->snake[$i]);
                 if ($c == Game::EMPTY_CELL)
                 {
                     break;
