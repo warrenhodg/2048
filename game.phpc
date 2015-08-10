@@ -319,4 +319,21 @@ class Game
         $this->insert ();
         return $this->getAllMoves();
     }
+
+    public function getSpaces()
+    {
+        $res = [];
+        for ($y = 0; $y < $this->height; ++$y)
+        {
+            for ($x = 0; $x < $this->width; ++$x)
+            {
+                if ($this->board[$x][$y] == Game::EMPTY_CELL)
+                {
+                    $res[] = [$x, $y];
+                }
+            }
+        }
+
+        return $res;
+    }
 }
