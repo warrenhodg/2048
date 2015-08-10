@@ -1,0 +1,47 @@
+<?php
+require_once ("log.phpc");
+
+class AI
+{
+    private $scorers;
+
+    public function __construct($scorers)
+    {
+        $this->scorers = $scorers;
+    }
+
+    public function bestMove($game, $all_moves)
+    {
+        Log::log(Log::LOG_TYPE_AI, 1, "AI");
+        Log::log(Log::LOG_TYPE_AI, 2, "All moves : " . Game::getDirectionsString($all_moves));
+
+        $backup = $game->backup();
+
+        $best_score = FALSE;
+        $best_move = 0;
+        foreach ($all_moves as $move)
+        {
+            Log::log(Log::LOG_TYPE_AI, 2, "Direction=" . Game::getDirectionString($move));
+            $game->move($move);
+            
+            $was_best = FALSE;
+            $total_score = 0;
+            foreach ($this->scorers as $scorer)
+            {
+                $total_score += $scorer->getScore($game);
+            }
+
+            if (($total_score > $best_score) || ($best_score === FALSE))
+            {
+                $best_score = $total_score;
+                $best_move = $move;
+            }
+
+            Log::log(Log::LOG_TYPE_AI, 2, "Best so far is " . Game::getDirectionString($best_move) . "(" . $best_score . ")");
+
+            $game->restore($backup);
+        }
+
+        return $best_move;
+    }
+}

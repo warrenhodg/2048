@@ -1,0 +1,8 @@
+<?php
+require_once("game.phpc");
+
+interface Scorer
+{
+    public function getScore($game);
+}
+

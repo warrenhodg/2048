@@ -1,0 +1,322 @@
+<?php
+require_once("log.phpc");
+
+class Game
+{
+    private $width = 4;
+    private $height = 4;
+    private $display_cell = 7;
+    private $score;
+
+    private $board;
+
+    const EMPTY_CELL = 0;
+    const MOVE_UP = 1;
+    const MOVE_LEFT = 2;
+    const MOVE_RIGHT = 3;
+    const MOVE_DOWN = 4;
+    const NOT_FOUND = -1;
+
+    const ERROR_NOP = "Nothing happened";
+    const GAME_OVER = "Game over";
+
+    public function __construct()
+    {
+        $this->newGame();
+    }
+
+    public function newGame()
+    {
+        Log::log(Log::LOG_TYPE_GAME, 1, "New Game");
+        $row = [];
+        for ($x = 0; $x < $this->width; ++$x) $row [] = Game::EMPTY_CELL;
+        $this->board = [];
+        for ($y = 0; $y < $this->height; ++$y) $this->board[] = $row;
+
+        $this->score = 0;
+
+        $this->insert();
+    }
+
+    public function backup()
+    {
+        return ["score"=>$this->score, "board"=>$this->board];
+    }
+
+    public function restore($backup)
+    {
+        $this->score = $backup["score"];
+        $this->board = $backup["board"];
+    }
+
+    public function getWidth()
+    {
+        return $this->width;
+    }
+
+    public function getHeight()
+    {
+        return $this->height;
+    }
+
+    public function getJson()
+    {
+        return json_encode($this->board);
+    }
+
+    public function __toString()
+    {
+        $hline = "+";
+        for ($x = 0; $x < $this->width; ++$x)
+        {
+            $hline .= str_pad ("", $this->display_cell + 2, "-") . "+";
+        }
+        $hline .= "\n";
+
+        $res = $hline;
+        for ($y = 0; $y < 4; ++$y)
+        {
+            $res .= "|";
+            for ($x = 0; $x < 4; ++$x)
+            {
+                $cell = ($this->board[$x][$y] == Game::EMPTY_CELL) ? "" : $this->board[$x][$y];
+                $res .= " " . str_pad($cell, $this->display_cell, " ") . " |";
+            }
+            $res .= "\n";
+            $res .= $hline;
+        }
+
+        $res .= "Score : " . $this->score . "\n";
+
+        return $res;
+    }
+
+    public function getScore()
+    {
+        return $this->score;
+    }
+
+    public function getBoard()
+    {
+        return $this->board;
+    }
+
+    public function getCell($p, $y=0)
+    {
+        if (is_array($p))
+        {
+            $x = $p [0];
+            $y = $p [1];
+        } else
+        {
+            $x = $p;
+        }
+
+        return $this->board [$x][$y];
+    }
+
+    public static function getDirectionString($direction)
+    {
+        switch ($direction)
+        {
+            case Game::MOVE_LEFT:
+                return "LEFT";
+            case Game::MOVE_RIGHT:
+                return "RIGHT";
+            case Game::MOVE_UP:
+                return "UP";
+            case Game::MOVE_DOWN:
+                return "DOWN";
+        }
+        return "?";
+    }
+
+    public static function getDirectionsString($directions)
+    {
+        if (is_array($directions))
+        {
+            for ($i = 0; $i < count($directions); ++$i) $directions [$i] = Game::getDirectionString($directions [$i]);
+        }
+        return json_encode($directions);
+    }
+
+    public function canInsert()
+    {
+        for ($y = 0; $y < $this->height; ++$y)
+        {
+            for ($x = 0; $x < $this->width; ++$x)
+            {
+                if ($this->board [$x][$y] == Game::EMPTY_CELL)
+                {
+                    return TRUE;
+                }
+            }
+        }
+        return FALSE;
+    }
+
+    private function insert()
+    {
+        $index = $this->getRandomEmptyIndex();
+        $num = rand(1, 2) * 2;
+        $x = $index [0];
+        $y = $index [1];
+        $this->board [$x][$y] = $num;
+        Log::log(Log::LOG_TYPE_GAME, 2, "Inserting " . $num . " at [". $x . "][" . $y . "]");
+    }
+
+    private function getRandomEmptyIndex()
+    {
+        do
+        {
+            $x = rand(0, $this->width - 1);
+            $y = rand(0, $this->height - 1);
+
+        } while ($this->board [$x][$y] != Game::EMPTY_CELL);
+        return [$x, $y];
+    }
+
+    private function findIndexOfNextInRow($fromX, $y)
+    {
+        for ($x = $fromX; $x < $this->width; ++$x)
+        {
+            if ($this->board [$x][$y] != Game::EMPTY_CELL)
+            {
+                return $x;
+            }
+        }
+        return Game::NOT_FOUND;
+    }
+
+    public function mirrorX()
+    {
+        $tmp = $this->board;
+        for ($y = 0; $y < $this->height; ++$y)
+        {
+            for ($x = 0; $x < $this->width; ++$x)
+            {
+                $this->board [$this->width - $x - 1][$y] = $tmp [$x][$y];
+            }
+        }
+    }
+
+    public function mirrorY()
+    {
+        $tmp = $this->board;
+        for ($y = 0; $y < $this->height; ++$y)
+        {
+            for ($x = 0; $x < $this->width; ++$x)
+            {
+                $this->board [$x][$this->height - $y - 1] = $tmp [$x][$y];
+            }
+        }
+    }
+
+    public function mirrorXY()
+    {
+        $tmp = $this->board;
+        for ($y = 0; $y < $this->height; ++$y)
+        {
+            for ($x = 0; $x < $this->width; ++$x)
+            {
+                $this->board [$x][$y] = $tmp [$y][$x];
+            }
+        }
+    }
+
+    private function moveLeft()
+    {
+        for ($y = 0; $y < $this->height; ++$y)
+        {
+            $x = 0;
+            while (1)
+            {
+                $x1 = $this->findIndexOfNextInRow($x, $y);
+                if ($x1 == Game::NOT_FOUND)
+                {
+                    break;
+                }
+
+                $x2 = $this->findIndexOfNextInRow($x1 + 1, $y);
+                if ($x2 != Game::NOT_FOUND)
+                {
+                    if ($this->board [$x1][$y] == $this->board [$x2][$y])
+                    {
+                        $this->board [$x1][$y] *= 2;
+                        $this->board [$x2][$y] = Game::EMPTY_CELL;
+                        $this->score += $this->board [$x1][$y];
+                    }
+                }
+
+                if ($x != $x1)
+                {
+                    $this->board [$x][$y] = $this->board [$x1][$y];
+                    $this->board [$x1][$y] = Game::EMPTY_CELL;
+                }
+
+                ++$x;
+            }
+        }
+    }
+
+    public function getAllMoves()
+    {
+        $res = [];
+
+        $backup = $this->backup();
+
+        for ($direction = Game::MOVE_UP; $direction <= Game::MOVE_DOWN; ++$direction)
+        {
+            $this->move($direction);
+            if ($this->board != $backup ["board"]) 
+            {
+                $res[] = $direction;
+            }
+            $this->restore($backup);
+        }
+    
+        if (count($res) == 0) return Game::GAME_OVER;
+        return $res;
+    }
+    
+    public function move($direction)
+    {
+        switch ($direction)
+        {
+            case Game::MOVE_LEFT:
+                $this->moveLeft();
+                break;
+
+            case Game::MOVE_RIGHT:
+                $this->mirrorX();
+                $this->moveLeft();
+                $this->mirrorX();
+                break;
+
+            case Game::MOVE_UP:
+                $this->mirrorXY();
+                $this->moveLeft();
+                $this->mirrorXY();
+                break;
+
+            case Game::MOVE_DOWN:
+                $this->mirrorXY();
+                $this->mirrorX();
+                $this->moveLeft();
+                $this->mirrorX();
+                $this->mirrorXY();
+                break;
+        }
+    }
+
+    public function moveAndCheck($direction)
+    {
+        $this->move($direction);
+
+        if ($before == $this->board) return Game::ERROR_NOP;
+
+        if (!$this->canInsert()) return Game::GAME_OVER;
+        $this->insert ();
+        return $this->getAllMoves();
+    }
+}

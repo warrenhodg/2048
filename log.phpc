@@ -1,0 +1,22 @@
+<?php
+class Log
+{
+    const LOG_TYPE_MAIN = "MAIN";
+    const LOG_TYPE_GAME = "GAME";
+    const LOG_TYPE_MOVE = "MOVE";
+    const LOG_TYPE_ALL_MOVES = "ALL MOVES";
+    const LOG_TYPE_AI = "AI";
+
+    public static $log_levels = [];
+
+    private function __construct()
+    {
+    }
+
+    public static function log($log_type, $log_level, $message)
+    {
+        if (!array_key_exists($log_type, Log::$log_levels)) return;
+        if ($log_level > Log::$log_levels [$log_type]) return;
+        echo str_pad("", $log_level - 1, "\t") . $message . "\n";
+    }
+}
