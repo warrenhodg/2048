@@ -6,6 +6,16 @@ class SnakeScorer implements Scorer
     private $power;
     private $space_penalty;
 
+    private static $transformations = [
+        ["description"=>"TL-TR", "actions"=>[]],
+        ["description"=>"TL-BR", "actions"=>["XY"]],
+        ["description"=>"TR-TL", "actions"=>["X"]],
+        ["description"=>"TR-BR", "actions"=>["X", "XY"]],
+        ["description"=>"BL-BR", "actions"=>["Y"]],
+        ["description"=>"BL-TL", "actions"=>["Y", "XY"]],
+        ["description"=>"BR-BL", "actions"=>["X", "Y"]],
+        ["description"=>"BR-TR", "actions"=>["X", "Y", "XY"]]];
+
     public function __construct($power, $space_penalty)
     {
         $this->power = $power;
@@ -20,53 +30,27 @@ class SnakeScorer implements Scorer
 
         $max_score = 0;
         
-        //Top-left to top-right
-        $this->test ($max_score, $game, $snake, "TL-TR");
+        $backup = $game->backup();
+        foreach (SnakeScorer::$transformations as $transform)
+        {
+            foreach ($transform ["actions"] as $action)
+            {
+                switch ($action)
+                {
+                    case "X":
+                        $game->mirrorX();
+                        break;
+                    case "Y":
+                        $game->mirrorY();
+                        break;
+                    case "XY":
+                        $game->mirrorXY();
+                        break;
+                }
+            }
 
-        //Top-left to bottom-left
-        $game->mirrorXY();
-        $this->test ($max_score, $game, $snake, "TL-BL");
-        $game->mirrorXY();
-
-        //Top-right to top-left
-        $game->mirrorX();
-        $this->test ($max_score, $game, $snake, "TR-TL");
-        $game->mirrorX();
-
-        //Top-right to bottom-right
-        $game->mirrorX();
-        $game->mirrorXY();
-        $this->test ($max_score, $game, $snake, "TR-BR");
-        $game->mirrorXY();
-        $game->mirrorX();
-
-        //Bottom-left to bottom-right
-        $game->mirrorY();
-        $this->test ($max_score, $game, $snake, "BL-BR");
-        $game->mirrorY();
-
-        //Bottom-left to top-left
-        $game->mirrorY();
-        $game->mirrorXY();
-        $this->test ($max_score, $game, $snake, "BL-TL");
-        $game->mirrorXY();
-        $game->mirrorY();
-
-        //Bottom-right to bottom-left
-        $game->mirrorX();
-        $game->mirrorY();
-        $this->test ($max_score, $game, $snake, "BR-BL");
-        $game->mirrorY();
-        $game->mirrorX();
-
-        //Bottom-right to top-right
-        $game->mirrorX();
-        $game->mirrorY();
-        $game->mirrorXY();
-        $this->test ($max_score, $game, $snake, "BR-TR");
-        $game->mirrorXY();
-        $game->mirrorY();
-        $game->mirrorX();
+            $this->test($max_score, $game, $snake, $transform ["description"]);
+        }
 
         return $max_score;
     }    
