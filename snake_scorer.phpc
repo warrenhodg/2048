@@ -7,6 +7,7 @@ class SnakeScorer implements Scorer
     private $space_penalty;
     private $moves_ahead = 1;
     private $snake;
+    private $possibleNumbers;
 
     private static $transformations = [
         ["description"=>"TL-TR", "actions"=>[]],
@@ -18,9 +19,11 @@ class SnakeScorer implements Scorer
         ["description"=>"BR-BL", "actions"=>["X", "Y"]],
         ["description"=>"BR-TR", "actions"=>["X", "Y", "XY"]]];
 
-    public function __construct($game, $power, $space_penalty)
+
+    public function __construct($game, $possibleNumbers, $power, $space_penalty)
     {
         $snake = $this->getSnake($game);
+        $this->possibleNumbers = $possibleNumbers;
         $this->power = $power;
         $this->space_penalty = $space_penalty;
     }

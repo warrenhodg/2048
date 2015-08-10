@@ -12,7 +12,7 @@ Log::$log_levels [Log::LOG_TYPE_GAME] = 99;
 
 $game = new Game();
 
-$ai = new AI([new SnakeScorer($game, 1.1, 0.2)]);
+$ai = new AI([new SnakeScorer($game, [2, 4], 1.1, 0.2)]);
 
 $i = 0;
 while (1)
