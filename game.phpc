@@ -320,7 +320,7 @@ class Game
         return $this->getAllMoves();
     }
 
-    public function getSpaces()
+    public function getSpacePositions()
     {
         $res = [];
         for ($y = 0; $y < $this->height; ++$y)
@@ -335,5 +335,10 @@ class Game
         }
 
         return $res;
+    }
+
+    public function setBoardValue($position, $value)
+    {
+        $this->board [$position [0]][$position [1]] = $value;
     }
 }

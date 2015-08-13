@@ -5,7 +5,7 @@ class SnakeScorer implements Scorer
 {
     private $power;
     private $space_penalty;
-    private $moves_ahead = 1;
+    private $levelsToCalculate = 1;
     private $snake;
     private $possibleNumbers;
 
@@ -20,21 +20,81 @@ class SnakeScorer implements Scorer
         ["description"=>"BR-TR", "actions"=>["X", "Y", "XY"]]];
 
 
-    public function __construct($game, $possibleNumbers, $power, $space_penalty)
+    public function __construct($game, $possibleNumbers, $power, $space_penalty, $levelsToCalculate)
     {
-        $snake = $this->getSnake($game);
+        $this->snake = $this->getSnake($game);
         $this->possibleNumbers = $possibleNumbers;
         $this->power = $power;
         $this->space_penalty = $space_penalty;
+        $this->levelsToCalculate = $levelsToCalculate;
     }
 
     public function getScore($game)
     {
-        Log::log(Log::LOG_TYPE_AI, 3, "SnakeScorer");
+        //Log::log(Log::LOG_TYPE_AI, 3, "SnakeScorer");
 
-        $max_score = 0;
-        
+        return $this->getMaxScoreForLevel($game, 0);
+    }    
+
+    private function getMaxScoreForLevel($game, $level)
+    {
+        //Log::log(Log::LOG_TYPE_AI, 4 + $level * 3, "getMaxScoreForLevel " . $level);
+        if ($level < $this->levelsToCalculate)
+        {
+            $space_positions = $game->getSpacePositions ();
+            $possibilities = count($this->possibleNumbers) * count($space_positions); 
+            //Log::log(Log::LOG_TYPE_AI, 5 + $level * 3, "Possibilities = " . $possibilities);
+
+            $backup = $game->backup();
+
+            $total = 0;
+
+            foreach ($this->possibleNumbers as $number)
+            {
+                foreach ($space_positions as $position)
+                {
+                    //Log::log(Log::LOG_TYPE_AI, 5 + $level * 3, "Setting " . json_encode($position) . " to " . $number);
+                    $game->setBoardValue($position, $number);
+
+                    $best_move = FALSE;
+                    $best_score = FALSE;
+                    $all_moves = $game->getAllMoves ();
+                    
+                    $backup_move = $game->backup(); 
+                    foreach ($all_moves as $move)
+                    {
+                        //Log::log(Log::LOG_TYPE_AI, 6 + $level * 3, "Trying direction=" . Game::getDirectionString($move));
+                        $game->move($move);
+                        $score = $this->getMaxScoreForLevel($game, $level+1);
+                        
+                        if (($best_score === FALSE) || ($score >= $best_score))
+                        {
+                            $best_score = $score;
+                            $best_move = $move;
+                        }
+                        $game->restore($backup_move); 
+                    }
+
+                    $total += $best_score;
+                    $game->restore($backup);
+                }
+            }
+
+            return $total / $possibilities;
+        }
+        else
+        {
+            $score = $this->getFutureScore($game, $level);
+            //Log::log(Log::LOG_TYPE_AI, 5 + $level * 3, "return score=" . $score);
+            return $score;
+        }
+    }
+
+    private function getFutureScore($game, $level)
+    {
         $backup = $game->backup();
+        $max_score = 0;
+
         foreach (SnakeScorer::$transformations as $transform)
         {
             foreach ($transform ["actions"] as $action)
@@ -53,23 +113,24 @@ class SnakeScorer implements Scorer
                 }
             }
 
-            $this->test($max_score, $game, $transform ["description"]);
+            $this->test($level, $max_score, $game, $transform ["description"]);
+            $game->restore ($backup);
         }
 
         return $max_score;
-    }    
+    }
 
-    private function test(&$max_score, $game, $description)
+    private function test($level, &$max_score, $game, $description)
     {
-        $score = $this->scoreSnake($game, $description);
+        $score = $this->scoreSnake($game, $description, $level);
         if ($score >= $max_score)
         {
             $max_score = $score;
         }
-        Log::log(Log::LOG_TYPE_AI, 3, "Max Score=" . $max_score);
+        //Log::log(Log::LOG_TYPE_AI, 7 + $level * 3, "Max Score=" . $max_score);
     }
 
-    private function scoreSnake($game, $description)
+    private function scoreSnake($game, $description, $level)
     {
         $score = 0;
 
@@ -100,7 +161,7 @@ class SnakeScorer implements Scorer
 
                 if (($min_value == Game::EMPTY_CELL) || ($c <= $min_value))
                 {
-                    $score += $c ^ $this->power;
+                    $score += pow($c, $this->power);
                     $min_value = $c;
                 }
 
@@ -111,7 +172,7 @@ class SnakeScorer implements Scorer
         $pre_score = $score;
         for ($i = 0; $i < $spaces; ++$i) $score *= $this->space_penalty;
 
-        Log::log(Log::LOG_TYPE_AI, 4, "Snake:" . $description . " spaces=" . $spaces . " pre=" . $pre_score . " score=" . $score);
+        //Log::log(Log::LOG_TYPE_AI, 5 + $level * 3, "Snake: level=" . $level . " " . $description . " spaces=" . $spaces . " pre=" . $pre_score . " score=" . $score);
         return $score;
     }
 
