@@ -91,6 +91,17 @@ class Game
         return $res;
     }
 
+    public function toString($indent)
+    {
+        $res = "";
+        $lines = explode("\n", $this->__toString());
+        for ($i = 0; $i < count($lines); ++$i)
+        {
+            $res .= str_pad("", $indent - 1, "  ") . $lines [$i] . "\n";
+        }
+        return $res;
+    }
+
     public function getScore()
     {
         return $this->score;

@@ -12,8 +12,8 @@ class AI
 
     public function bestMove($game, $all_moves)
     {
-        //Log::log(Log::LOG_TYPE_AI, 1, "AI");
-        //Log::log(Log::LOG_TYPE_AI, 2, "All moves : " . Game::getDirectionsString($all_moves));
+        Log::log(Log::LOG_TYPE_AI, 1, "AI");
+        Log::log(Log::LOG_TYPE_AI, 2, "All moves : " . Game::getDirectionsString($all_moves));
 
         $backup = $game->backup();
 
@@ -21,8 +21,9 @@ class AI
         $best_move = 0;
         foreach ($all_moves as $move)
         {
-            //Log::log(Log::LOG_TYPE_AI, 2, "Direction=" . Game::getDirectionString($move));
+            Log::log(Log::LOG_TYPE_AI, 2, "Direction=" . Game::getDirectionString($move));
             $game->move($move);
+            //Log::log(Log::LOG_TYPE_AI, 1, $game->toString(2));
             
             $was_best = FALSE;
             $total_score = 0;
@@ -37,7 +38,7 @@ class AI
                 $best_move = $move;
             }
 
-            //Log::log(Log::LOG_TYPE_AI, 2, "Best so far is " . Game::getDirectionString($best_move) . "(" . $best_score . ")");
+            Log::log(Log::LOG_TYPE_AI, 2, "Best so far is " . Game::getDirectionString($best_move) . "(" . $best_score . ")");
 
             $game->restore($backup);
         }
