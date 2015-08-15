@@ -3,8 +3,7 @@ require_once("log.phpc");
 
 class Game
 {
-    private $width = 4;
-    private $height = 4;
+    private $side = 4;
     private $display_cell = 7;
     private $score;
 
@@ -29,9 +28,9 @@ class Game
     {
         Log::log(Log::LOG_TYPE_GAME, 1, "New Game");
         $row = [];
-        for ($x = 0; $x < $this->width; ++$x) $row [] = Game::EMPTY_CELL;
+        for ($x = 0; $x < $this->side; ++$x) $row [] = Game::EMPTY_CELL;
         $this->board = [];
-        for ($y = 0; $y < $this->height; ++$y) $this->board[] = $row;
+        for ($y = 0; $y < $this->side; ++$y) $this->board[] = $row;
 
         $this->score = 0;
 
@@ -49,14 +48,9 @@ class Game
         $this->board = $backup["board"];
     }
 
-    public function getWidth()
+    public function getSide()
     {
-        return $this->width;
-    }
-
-    public function getHeight()
-    {
-        return $this->height;
+        return $this->side;
     }
 
     public function getJson()
@@ -67,7 +61,7 @@ class Game
     public function __toString()
     {
         $hline = "+";
-        for ($x = 0; $x < $this->width; ++$x)
+        for ($x = 0; $x < $this->side; ++$x)
         {
             $hline .= str_pad ("", $this->display_cell + 2, "-") . "+";
         }
@@ -153,9 +147,9 @@ class Game
 
     public function canInsert()
     {
-        for ($y = 0; $y < $this->height; ++$y)
+        for ($y = 0; $y < $this->side; ++$y)
         {
-            for ($x = 0; $x < $this->width; ++$x)
+            for ($x = 0; $x < $this->side; ++$x)
             {
                 if ($this->board [$x][$y] == Game::EMPTY_CELL)
                 {
@@ -180,8 +174,8 @@ class Game
     {
         do
         {
-            $x = rand(0, $this->width - 1);
-            $y = rand(0, $this->height - 1);
+            $x = rand(0, $this->side - 1);
+            $y = rand(0, $this->side - 1);
 
         } while ($this->board [$x][$y] != Game::EMPTY_CELL);
         return [$x, $y];
@@ -189,7 +183,7 @@ class Game
 
     private function findIndexOfNextInRow($fromX, $y)
     {
-        for ($x = $fromX; $x < $this->width; ++$x)
+        for ($x = $fromX; $x < $this->side; ++$x)
         {
             if ($this->board [$x][$y] != Game::EMPTY_CELL)
             {
@@ -202,11 +196,11 @@ class Game
     public function mirrorX()
     {
         $tmp = $this->board;
-        for ($y = 0; $y < $this->height; ++$y)
+        for ($y = 0; $y < $this->side; ++$y)
         {
-            for ($x = 0; $x < $this->width; ++$x)
+            for ($x = 0; $x < $this->side; ++$x)
             {
-                $this->board [$this->width - $x - 1][$y] = $tmp [$x][$y];
+                $this->board [$this->side - $x - 1][$y] = $tmp [$x][$y];
             }
         }
     }
@@ -214,11 +208,11 @@ class Game
     public function mirrorY()
     {
         $tmp = $this->board;
-        for ($y = 0; $y < $this->height; ++$y)
+        for ($y = 0; $y < $this->side; ++$y)
         {
-            for ($x = 0; $x < $this->width; ++$x)
+            for ($x = 0; $x < $this->side; ++$x)
             {
-                $this->board [$x][$this->height - $y - 1] = $tmp [$x][$y];
+                $this->board [$x][$this->side - $y - 1] = $tmp [$x][$y];
             }
         }
     }
@@ -226,9 +220,9 @@ class Game
     public function mirrorXY()
     {
         $tmp = $this->board;
-        for ($y = 0; $y < $this->height; ++$y)
+        for ($y = 0; $y < $this->side; ++$y)
         {
-            for ($x = 0; $x < $this->width; ++$x)
+            for ($x = 0; $x < $this->side; ++$x)
             {
                 $this->board [$x][$y] = $tmp [$y][$x];
             }
@@ -237,7 +231,7 @@ class Game
 
     private function moveLeft()
     {
-        for ($y = 0; $y < $this->height; ++$y)
+        for ($y = 0; $y < $this->side; ++$y)
         {
             $x = 0;
             while (1)
@@ -334,9 +328,9 @@ class Game
     public function getSpacePositions()
     {
         $res = [];
-        for ($y = 0; $y < $this->height; ++$y)
+        for ($y = 0; $y < $this->side; ++$y)
         {
-            for ($x = 0; $x < $this->width; ++$x)
+            for ($x = 0; $x < $this->side; ++$x)
             {
                 if ($this->board[$x][$y] == Game::EMPTY_CELL)
                 {
