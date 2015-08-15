@@ -23,7 +23,7 @@ class SnakeScorer implements Scorer
 
     public function __construct($game, $power, $pre_snake_space_penalty, $post_snake_space_penalty, $not_moveable_penalty, $levelsToCalculate)
     {
-        $this->snakes = $this->getSnakes($game);
+        $this->makeSnakes($game);
         $this->power = $power;
         $this->pre_snake_space_penalty = $pre_snake_space_penalty;
         $this->post_snake_space_penalty = $post_snake_space_penalty;
@@ -213,27 +213,42 @@ class SnakeScorer implements Scorer
         return $score;
     }
 
-    private function getSnakes($game)
+    private function makeSnakes($game)
     {
-        $snake = [];
+        $this->snakes = [];
+        { //Do the zig-zag snake
+            $snake = [];
 
-        $x = 0;
-        $y = 0;
-        $xd = 1;
+            $x = 0;
+            $y = 0;
+            $xd = 1;
 
-        while ($y < $game->getHeight())
-        {
-            $snake [] = [$x, $y];
-            if ((($x == 0) && ($xd == -1)) || (($x == $game->getWidth() - 1) && ($xd == 1)))
+            while ($y < $game->getHeight())
             {
-                ++$y; 
-                $xd = -$xd;
+                $snake [] = [$x, $y];
+                if ((($x == 0) && ($xd == -1)) || (($x == $game->getWidth() - 1) && ($xd == 1)))
+                {
+                    ++$y; 
+                    $xd = -$xd;
+                }
+                else
+                {
+                    $x += $xd;
+                }
             }
-            else
-            {
-                $x += $xd;
-            }
+            $this->snakes [] = $snake;
         }
-        return [$snake];
+
+        { //Do the U shaped snake
+            $snake = [];
+            $x = 0;
+            $y = 0;
+
+            for ($x = 0; $x < $game->getWidth(); ++$x) $snake [] = [$x, $y];
+            for ($y = 0; $y < $game->getHeight(); ++$y) $snake [] = [$x, $y];
+            for ($x = $game->getWidth() - 1; $x >= 0; --$x) $snake [] = [$x, $y];
+
+            $this->snakes [] = $snake;
+        }
     }
 }
