@@ -4,93 +4,137 @@ require_once("scorer.phpi");
 class SnakeScorer implements Scorer
 {
     private $power;
-    private $space_penalty;
+    private $pre_snake_space_penalty;
+    private $post_snake_space_penalty;
+    private $not_moveable_penalty;
+    private $levelsToCalculate = 1;
+    private $snake;
 
-    public function __construct($power, $space_penalty)
+    private static $transformations = [
+        ["description"=>"TL-TR", "actions"=>[]],
+        ["description"=>"TL-BR", "actions"=>["XY"]],
+        ["description"=>"TR-TL", "actions"=>["X"]],
+        ["description"=>"TR-BR", "actions"=>["X", "XY"]],
+        ["description"=>"BL-BR", "actions"=>["Y"]],
+        ["description"=>"BL-TL", "actions"=>["Y", "XY"]],
+        ["description"=>"BR-BL", "actions"=>["X", "Y"]],
+        ["description"=>"BR-TR", "actions"=>["X", "Y", "XY"]]];
+
+
+    public function __construct($game, $power, $pre_snake_space_penalty, $post_snake_space_penalty, $not_moveable_penalty, $levelsToCalculate)
     {
+        $this->snake = $this->getSnake($game);
         $this->power = $power;
-        $this->space_penalty = $space_penalty;
+        $this->pre_snake_space_penalty = $pre_snake_space_penalty;
+        $this->post_snake_space_penalty = $post_snake_space_penalty;
+        $this->not_moveable_penalty = $not_moveable_penalty;
+        $this->levelsToCalculate = $levelsToCalculate;
     }
 
     public function getScore($game)
     {
         Log::log(Log::LOG_TYPE_AI, 3, "SnakeScorer");
 
-        $snake = $this->getSnake($game);
-
-        $max_score = 0;
-        
-        //Top-left to top-right
-        $this->test ($max_score, $game, $snake, "TL-TR");
-
-        //Top-left to bottom-left
-        $game->mirrorXY();
-        $this->test ($max_score, $game, $snake, "TL-BL");
-        $game->mirrorXY();
-
-        //Top-right to top-left
-        $game->mirrorX();
-        $this->test ($max_score, $game, $snake, "TR-TL");
-        $game->mirrorX();
-
-        //Top-right to bottom-right
-        $game->mirrorX();
-        $game->mirrorXY();
-        $this->test ($max_score, $game, $snake, "TR-BR");
-        $game->mirrorXY();
-        $game->mirrorX();
-
-        //Bottom-left to bottom-right
-        $game->mirrorY();
-        $this->test ($max_score, $game, $snake, "BL-BR");
-        $game->mirrorY();
-
-        //Bottom-left to top-left
-        $game->mirrorY();
-        $game->mirrorXY();
-        $this->test ($max_score, $game, $snake, "BL-TL");
-        $game->mirrorXY();
-        $game->mirrorY();
-
-        //Bottom-right to bottom-left
-        $game->mirrorX();
-        $game->mirrorY();
-        $this->test ($max_score, $game, $snake, "BR-BL");
-        $game->mirrorY();
-        $game->mirrorX();
-
-        //Bottom-right to top-right
-        $game->mirrorX();
-        $game->mirrorY();
-        $game->mirrorXY();
-        $this->test ($max_score, $game, $snake, "BR-TR");
-        $game->mirrorXY();
-        $game->mirrorY();
-        $game->mirrorX();
-
-        return $max_score;
+        return $this->getTotalScoreTillLevel($game, 0);
     }    
 
-    private function test(&$max_score, $game, $snake, $description)
+    private function getTotalScoreTillLevel($game, $level)
     {
-        $score = $this->scoreSnake($game, $snake, $description);
+        $this_level_score = $this->getFutureScore($game, $level);
+        Log::log(Log::LOG_TYPE_AI, 5 + $level * 3, "Have score " . $this_level_score . " at level " . $level);
+
+        if ($level < $this->levelsToCalculate)
+        {
+            $backup = $game->backup();
+
+            $total = 0;
+
+            $best_move = FALSE;
+            $best_score = FALSE;
+            $all_moves = $game->getAllMoves ();
+            
+            $backup_move = $game->backup(); 
+            foreach ($all_moves as $move)
+            {
+                Log::log(Log::LOG_TYPE_AI, 6 + $level * 3, "Trying direction=" . Game::getDirectionString($move));
+                $game->move($move);
+                //Log::log(Log::LOG_TYPE_AI, 1, $game->toString(6 + $level * 3));
+                $score = $this->getTotalScoreTillLevel($game, $level+1);
+                
+                if (($best_score === FALSE) || ($score >= $best_score))
+                {
+                    $best_score = $score;
+                    $best_move = $move;
+                }
+                $game->restore($backup_move); 
+            }
+
+            $game->restore($backup);
+
+            $best_score *= 0.5;
+            Log::log(Log::LOG_TYPE_AI, 5 + $level * 3, "Returning score " . $this_level_score . " + " . $best_score . " = " . ($best_score + $this_level_score) . " at level " . $level);
+            return $best_score + $this_level_score;
+        }
+        else
+        {
+            return $this_level_score;
+        }
+    }
+
+    private function getFutureScore($game, $level)
+    {
+        $backup = $game->backup();
+        $max_score = 0;
+
+        //Try all 8 orientations of snakes
+        foreach (SnakeScorer::$transformations as $transform)
+        {
+            //Log::log(Log::LOG_TYPE_AI, 6 + $level * 3, "Transformation : " . $transform ["description"]);
+
+            //Do the actions to orientate the snake
+            foreach ($transform ["actions"] as $action)
+            {
+                switch ($action)
+                {
+                    case "X":
+                        $game->mirrorX();
+                        break;
+                    case "Y":
+                        $game->mirrorY();
+                        break;
+                    case "XY":
+                        $game->mirrorXY();
+                        break;
+                }
+            }
+
+            $this->test($level, $max_score, $game, $transform ["description"]);
+            $game->restore ($backup);
+        }
+
+        return $max_score;
+    }
+
+    private function test($level, &$max_score, $game, $description)
+    {
+        $score = $this->scoreSnake($game, $description, $level);
         if ($score >= $max_score)
         {
             $max_score = $score;
         }
-        Log::log(Log::LOG_TYPE_AI, 3, "Max Score=" . $max_score);
+        //Log::log(Log::LOG_TYPE_AI, 7 + $level * 3, "Max score=" . $max_score);
     }
 
-    private function scoreSnake($game, $snake, $description)
+    private function scoreSnake($game, $description, $level)
     {
         $score = 0;
 
         $i = 0;
         $spaces = 0;
         { //Count spaces
-            while ($i < count($snake))
+            while ($i < count($this->snake))
             {
-                $c = $game->getCell($snake[$i]);
+                $c = $game->getCell($this->snake[$i]);
                 if ($c != Game::EMPTY_CELL)
                 {
                     break;
@@ -102,9 +146,10 @@ class SnakeScorer implements Scorer
 
         { //Score snake
             $min_value = Game::EMPTY_CELL;
-            while ($i < count($snake))
+            $snake_len = 0;
+            while ($i < count($this->snake))
             {
-                $c = $game->getCell($snake[$i]);
+                $c = $game->getCell($this->snake[$i]);
                 if ($c == Game::EMPTY_CELL)
                 {
                     break;
@@ -112,8 +157,9 @@ class SnakeScorer implements Scorer
 
                 if (($min_value == Game::EMPTY_CELL) || ($c <= $min_value))
                 {
-                    $score += $c ^ $this->power;
+                    $score += pow($c, $this->power);
                     $min_value = $c;
+                    ++$snake_len;
                 }
 
                 ++$i;
@@ -121,9 +167,49 @@ class SnakeScorer implements Scorer
         } 
 
         $pre_score = $score;
-        for ($i = 0; $i < $spaces; ++$i) $score *= $this->space_penalty;
+        for ($i = 0; $i < $spaces; ++$i) $score *= $this->pre_snake_space_penalty;
+        $spaces_score = $score;
 
-        Log::log(Log::LOG_TYPE_AI, 4, "Snake:" . $description . " spaces=" . $spaces . " pre=" . $pre_score . " score=" . $score);
+        { //Downscore more per gap in the first line of the snake
+            if ($spaces == 0)
+            {
+                if ($snake_len < $game->getWidth())
+                {
+                    //Log::log(Log::LOG_TYPE_AI, 7 + $level * 3, "Gaps in first line of snake.\n");
+                    $score *= $this->post_snake_space_penalty;
+                }
+                else
+                {
+                    //Log::log(Log::LOG_TYPE_AI, 7 + $level * 3, "No gaps in first line of snake.\n");
+                }
+            }
+        }
+
+        { //Downscore a lot for a snake missing exactly one element, when there's nothing but the snake
+            if (($spaces == 0) && ($snake_len % $game->getWidth() == $game->getWidth() - 1))
+            {
+                //Log::log(Log::LOG_TYPE_AI, 7 + $level * 3, "There is exactly on cell missing from the snake");
+
+                $cells_outside_snake = FALSE;
+                for ($i = $spaces + $snake_len; $i < count($this->snake); ++$i)
+                {
+                    $c = $game->getCell($this->snake[$i]);
+                    if ($c != Game::EMPTY_CELL)
+                    {
+                        $cells_outside_snake = TRUE;
+                        break;
+                    }
+                }
+
+                if (!cells_outside_snake)
+                {
+                    //Log::log(Log::LOG_TYPE_AI, 7 + $level * 3, "The are no cells outside the snake - penalizing");
+                    $score *= $this->not_moveable_penalty;
+                }
+            }
+        }
+
+        //Log::log(Log::LOG_TYPE_AI, 7 + $level * 3, "Snake: level=" . $level . " " . $description . " snakelen=" . $snake_len . " spaces=" . $spaces . " prescore=" . $pre_score . " spaces_score=" . $spaces_score . " score=" . $score);
         return $score;
     }
 

@@ -91,6 +91,17 @@ class Game
         return $res;
     }
 
+    public function toString($indent)
+    {
+        $res = "";
+        $lines = explode("\n", $this->__toString());
+        for ($i = 0; $i < count($lines); ++$i)
+        {
+            $res .= str_pad("", $indent - 1, "  ") . $lines [$i] . "\n";
+        }
+        return $res;
+    }
+
     public function getScore()
     {
         return $this->score;
@@ -318,5 +329,27 @@ class Game
         if (!$this->canInsert()) return Game::GAME_OVER;
         $this->insert ();
         return $this->getAllMoves();
+    }
+
+    public function getSpacePositions()
+    {
+        $res = [];
+        for ($y = 0; $y < $this->height; ++$y)
+        {
+            for ($x = 0; $x < $this->width; ++$x)
+            {
+                if ($this->board[$x][$y] == Game::EMPTY_CELL)
+                {
+                    $res[] = [$x, $y];
+                }
+            }
+        }
+
+        return $res;
+    }
+
+    public function setBoardValue($position, $value)
+    {
+        $this->board [$position [0]][$position [1]] = $value;
     }
 }

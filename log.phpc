@@ -17,6 +17,6 @@ class Log
     {
         if (!array_key_exists($log_type, Log::$log_levels)) return;
         if ($log_level > Log::$log_levels [$log_type]) return;
-        echo str_pad("", $log_level - 1, "\t") . $message . "\n";
+        echo str_pad("", $log_level - 1, "  ") . $message . "\n";
     }
 }

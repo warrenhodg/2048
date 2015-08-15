@@ -23,6 +23,7 @@ class AI
         {
             Log::log(Log::LOG_TYPE_AI, 2, "Direction=" . Game::getDirectionString($move));
             $game->move($move);
+            //Log::log(Log::LOG_TYPE_AI, 1, $game->toString(2));
             
             $was_best = FALSE;
             $total_score = 0;
