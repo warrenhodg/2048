@@ -16,7 +16,7 @@ bottom-right.
 * It is best if the biggest number of the snake cannot be compromised, so:
   1. any leading spaces before the snake are heavily penalised, as a number could be inserted or moved there, 
 messing up the pattern.
-  2. any trailing spaces in the last line penalised, because a bad insert could result in case #1.
+  2. any trailing spaces in the last line penalised, because a bad insert could result in the first case.
 
 * A snake must be able to grow naturally, so:
   1. A snake that a) cannot internally merge and b) whose last row is fully blocked by non-snake numbers that are larger than themselves is penalised.
