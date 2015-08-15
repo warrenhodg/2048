@@ -173,7 +173,7 @@ class SnakeScorer implements Scorer
         { //Downscore more per gap in the first line of the snake
             if ($spaces == 0)
             {
-                if ($snake_len < $game->getWidth())
+                if ($snake_len < $game->getSide())
                 {
                     //Log::log(Log::LOG_TYPE_AI, 7 + $level * 3, "Gaps in first line of snake.\n");
                     $score *= $this->post_snake_space_penalty;
@@ -186,7 +186,7 @@ class SnakeScorer implements Scorer
         }
 
         { //Downscore a lot for a snake missing exactly one element, when there's nothing but the snake
-            if (($spaces == 0) && ($snake_len % $game->getWidth() == $game->getWidth() - 1))
+            if (($spaces == 0) && ($snake_len % $game->getSide() == $game->getSide() - 1))
             {
                 //Log::log(Log::LOG_TYPE_AI, 7 + $level * 3, "There is exactly on cell missing from the snake");
 
@@ -221,10 +221,10 @@ class SnakeScorer implements Scorer
         $y = 0;
         $xd = 1;
 
-        while ($y < $game->getHeight())
+        while ($y < $game->getSide())
         {
             $snake [] = [$x, $y];
-            if ((($x == 0) && ($xd == -1)) || (($x == $game->getWidth() - 1) && ($xd == 1)))
+            if ((($x == 0) && ($xd == -1)) || (($x == $game->getSide() - 1) && ($xd == 1)))
             {
                 ++$y; 
                 $xd = -$xd;
