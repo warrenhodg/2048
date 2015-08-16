@@ -8,7 +8,7 @@ class SnakeScorer implements Scorer
     private $post_snake_space_penalty;
     private $not_moveable_penalty;
     private $levelsToCalculate = 1;
-    private $snake;
+    private $snakes;
 
     private static $transformations = [
         ["description"=>"TL-TR", "actions"=>[]],
@@ -23,7 +23,7 @@ class SnakeScorer implements Scorer
 
     public function __construct($game, $power, $pre_snake_space_penalty, $post_snake_space_penalty, $not_moveable_penalty, $levelsToCalculate)
     {
-        $this->snake = $this->getSnake($game);
+        $this->makeSnakes($game);
         $this->power = $power;
         $this->pre_snake_space_penalty = $pre_snake_space_penalty;
         $this->post_snake_space_penalty = $post_snake_space_penalty;
@@ -86,38 +86,42 @@ class SnakeScorer implements Scorer
         $backup = $game->backup();
         $max_score = 0;
 
-        //Try all 8 orientations of snakes
-        foreach (SnakeScorer::$transformations as $transform)
+        //Try all snakes
+        foreach ($this->snakes as $snake)
         {
-            //Log::log(Log::LOG_TYPE_AI, 6 + $level * 3, "Transformation : " . $transform ["description"]);
-
-            //Do the actions to orientate the snake
-            foreach ($transform ["actions"] as $action)
+            //Try all 8 orientations of snakes
+            foreach (SnakeScorer::$transformations as $transform)
             {
-                switch ($action)
-                {
-                    case "X":
-                        $game->mirrorX();
-                        break;
-                    case "Y":
-                        $game->mirrorY();
-                        break;
-                    case "XY":
-                        $game->mirrorXY();
-                        break;
-                }
-            }
+                //Log::log(Log::LOG_TYPE_AI, 6 + $level * 3, "Transformation : " . $transform ["description"]);
 
-            $this->test($level, $max_score, $game, $transform ["description"]);
-            $game->restore ($backup);
+                //Do the actions to orientate the snake
+                foreach ($transform ["actions"] as $action)
+                {
+                    switch ($action)
+                    {
+                        case "X":
+                            $game->mirrorX();
+                            break;
+                        case "Y":
+                            $game->mirrorY();
+                            break;
+                        case "XY":
+                            $game->mirrorXY();
+                            break;
+                    }
+                }
+
+                $this->test($level, $max_score, $game, $transform ["description"], $snake);
+                $game->restore ($backup);
+            }
         }
 
         return $max_score;
     }
 
-    private function test($level, &$max_score, $game, $description)
+    private function test($level, &$max_score, $game, $description, $snake)
     {
-        $score = $this->scoreSnake($game, $description, $level);
+        $score = $this->scoreSnake($game, $description, $level, $snake);
         if ($score >= $max_score)
         {
             $max_score = $score;
@@ -125,16 +129,16 @@ class SnakeScorer implements Scorer
         //Log::log(Log::LOG_TYPE_AI, 7 + $level * 3, "Max score=" . $max_score);
     }
 
-    private function scoreSnake($game, $description, $level)
+    private function scoreSnake($game, $description, $level, $snake)
     {
         $score = 0;
 
         $i = 0;
         $spaces = 0;
         { //Count spaces
-            while ($i < count($this->snake))
+            while ($i < count($snake))
             {
-                $c = $game->getCell($this->snake[$i]);
+                $c = $game->getCell($snake[$i]);
                 if ($c != Game::EMPTY_CELL)
                 {
                     break;
@@ -147,9 +151,9 @@ class SnakeScorer implements Scorer
         { //Score snake
             $min_value = Game::EMPTY_CELL;
             $snake_len = 0;
-            while ($i < count($this->snake))
+            while ($i < count($snake))
             {
-                $c = $game->getCell($this->snake[$i]);
+                $c = $game->getCell($snake[$i]);
                 if ($c == Game::EMPTY_CELL)
                 {
                     break;
@@ -191,9 +195,9 @@ class SnakeScorer implements Scorer
                 //Log::log(Log::LOG_TYPE_AI, 7 + $level * 3, "There is exactly on cell missing from the snake");
 
                 $cells_outside_snake = FALSE;
-                for ($i = $spaces + $snake_len; $i < count($this->snake); ++$i)
+                for ($i = $spaces + $snake_len; $i < count($snake); ++$i)
                 {
-                    $c = $game->getCell($this->snake[$i]);
+                    $c = $game->getCell($snake[$i]);
                     if ($c != Game::EMPTY_CELL)
                     {
                         $cells_outside_snake = TRUE;
@@ -213,27 +217,42 @@ class SnakeScorer implements Scorer
         return $score;
     }
 
-    private function getSnake($game)
+    private function makeSnakes($game)
     {
-        $snake = [];
+        $this->snakes = [];
+        { //Do the zig-zag snake
+            $snake = [];
 
-        $x = 0;
-        $y = 0;
-        $xd = 1;
+            $x = 0;
+            $y = 0;
+            $xd = 1;
 
-        while ($y < $game->getSide())
-        {
-            $snake [] = [$x, $y];
-            if ((($x == 0) && ($xd == -1)) || (($x == $game->getSide() - 1) && ($xd == 1)))
+            while ($y < $game->getSide())
             {
-                ++$y; 
-                $xd = -$xd;
+                $snake [] = [$x, $y];
+                if ((($x == 0) && ($xd == -1)) || (($x == $game->getSide() - 1) && ($xd == 1)))
+                {
+                    ++$y; 
+                    $xd = -$xd;
+                }
+                else
+                {
+                    $x += $xd;
+                }
             }
-            else
-            {
-                $x += $xd;
-            }
+            $this->snakes [] = $snake;
         }
-        return $snake;
+
+        { //Do the U shaped snake
+            $snake = [];
+            $x = 0;
+            $y = 0;
+
+            for ($x = 0; $x < $game->getSide(); ++$x) $snake [] = [$x, $y];
+            for ($y = 0; $y < $game->getSide(); ++$y) $snake [] = [$x, $y];
+            for ($x = $game->getSide() - 1; $x >= 0; --$x) $snake [] = [$x, $y];
+
+            $this->snakes [] = $snake;
+        }
     }
 }
