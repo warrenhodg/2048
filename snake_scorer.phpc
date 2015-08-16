@@ -7,8 +7,11 @@ class SnakeScorer implements Scorer
     private $pre_snake_space_penalty;
     private $post_snake_space_penalty;
     private $not_moveable_penalty;
+    private $non_snake_power = 1.1;
+    private $non_snake_weight = 0.1;
     private $levelsToCalculate = 1;
     private $snakes;
+    private $initial_snake_cells; //Grid of all FALSE
 
     private static $transformations = [
         ["description"=>"TL-TR", "actions"=>[]],
@@ -24,6 +27,7 @@ class SnakeScorer implements Scorer
     public function __construct($game, $power, $pre_snake_space_penalty, $post_snake_space_penalty, $not_moveable_penalty, $levelsToCalculate)
     {
         $this->makeSnakes($game);
+        $this->makeNonSnakeGrid($game);
         $this->power = $power;
         $this->pre_snake_space_penalty = $pre_snake_space_penalty;
         $this->post_snake_space_penalty = $post_snake_space_penalty;
@@ -133,6 +137,8 @@ class SnakeScorer implements Scorer
     {
         $score = 0;
 
+        $snake_cells = $this->initial_snake_cells;
+
         $i = 0;
         $spaces = 0;
         { //Count spaces
@@ -164,6 +170,7 @@ class SnakeScorer implements Scorer
                     $score += pow($c, $this->power);
                     $min_value = $c;
                     ++$snake_len;
+                    $snake_cells[$snake[$i][0]][$snake[$i][1]] = TRUE;
                 }
 
                 ++$i;
@@ -213,7 +220,24 @@ class SnakeScorer implements Scorer
             }
         }
 
-        //Log::log(Log::LOG_TYPE_AI, 7 + $level * 3, "Snake: level=" . $level . " " . $description . " snakelen=" . $snake_len . " spaces=" . $spaces . " prescore=" . $pre_score . " spaces_score=" . $spaces_score . " score=" . $score);
+        { //Penalise non-snake numbers
+            $non_snake = 0;
+            for ($x = 0; $x < $game->getSide(); ++$x)
+            {
+                for ($y = 0; $y < $game->getSide(); ++$y)
+                {
+                    if (!$snake_cells[$x][$y])
+                    {
+                        $c = $game->getCell($x, $y);
+                        $non_snake += pow($c, $this->non_snake_power);
+                    }
+                }
+            }
+        }
+
+        $score -= $non_snake * $this->non_snake_weight;
+
+        Log::log(Log::LOG_TYPE_AI, 7 + $level * 3, "Snake: level=" . $level . " " . $description . " snakelen=" . $snake_len . " spaces=" . $spaces . " prescore=" . $pre_score . " spaces_score=" . $spaces_score . " non_snake=" . $non_snake . " score=" . $score);
         return $score;
     }
 
@@ -253,6 +277,21 @@ class SnakeScorer implements Scorer
             for ($x = $game->getSide() - 1; $x >= 0; --$x) $snake [] = [$x, $y];
 
             $this->snakes [] = $snake;
+        }
+    }
+
+    private function makeNonSnakeGrid($game)
+    {
+        $this->initial_snake_cells = [];
+        { //Initialize all cells as non-snake
+            for ($x = 0; $x < $game->getSide(); ++$x)
+            {
+                $this->initial_snake_cells[$x] = [];
+                for ($y = 0; $y < $game->getSide(); ++$y)
+                {
+                    $this->initial_snake_cells[$x][$y] = FALSE;
+                }
+            }
         }
     }
 }

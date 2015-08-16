@@ -20,3 +20,10 @@ messing up the pattern.
 
 * A snake must be able to grow naturally, so:
   1. A snake that a) cannot internally merge and b) whose last row is fully blocked by non-snake numbers that are larger than themselves is penalised.
+
+## Ideas to implement in the future
+* Snakes start top-left, go to top-right. From there they can do either a u turn, or a 90 degree turn.
+
+* Penalise non-snake numbers by magnitude.
+
+* 
